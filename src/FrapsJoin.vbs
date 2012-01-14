@@ -7,13 +7,13 @@ Public gLastError 'message from most recent error, if any
 '********************************
 '** FrapsJoin: append Fraps AVI segments by generating an AviSynth script
 '
-'	INSTALL:
-'	   1) copy the project files to any location, eg "C:\Program Files\FrapsJoin"
-'	   2) in Windows Explorer, right-click the script, "Copy"
-'	   3) in the Explorer navigation bar, type "shell:sendto", Enter
-'	   4) right-click, "Paste Shortcut"
-'	USAGE:
-'	   see README or run without arguments
+'   INSTALL:
+'      1) copy the project files to any location, eg "C:\Program Files\FrapsJoin"
+'      2) in Windows Explorer, right-click the script, "Copy"
+'      3) in the Explorer navigation bar, type "shell:sendto", Enter
+'      4) right-click, "Paste Shortcut"
+'   USAGE:
+'      see README or run without arguments
 '
 '@version 1.0  12-Jan-2012     - wrote it
 '@version 1.1  13-Jan-2012     - added USAGE
@@ -40,42 +40,42 @@ Public gLastError 'message from most recent error, if any
     On Error Resume Next
 
     Set gFSO = CreateObject("Scripting.FileSystemObject")
-	TestObject gFSO, "FileSys"
+    TestObject gFSO, "FileSys"
 
     Dim iniPath: iniPath = WScript.ScriptFullName
     iniPath = gFSO.GetParentFolderName(iniPath) & "\" & gFSO.GetBaseName(iniPath) & ".ini"
 
-	Dim dict: Set dict = CreateObject("Scripting.Dictionary")
-	TestObject dict, "Dictionary"
+    Dim dict: Set dict = CreateObject("Scripting.Dictionary")
+    TestObject dict, "Dictionary"
 
-	IniReadSection iniPath, "", dict
+    IniReadSection iniPath, "", dict
 
-	'** prefix for all generated Avisynth scripts
-	Dim avsPrefix: avsPrefix = UnQuoteString(SafeDictItem(dict, "avsPrefix", "__")) 
+    '** prefix for all generated Avisynth scripts
+    Dim avsPrefix: avsPrefix = UnQuoteString(SafeDictItem(dict, "avsPrefix", "__")) 
 
-	Const APP_EXE = "FrapsJoin.vbs"
-	Const APP_TITLE = "Fraps Join"
+    Const APP_EXE = "FrapsJoin.vbs"
+    Const APP_TITLE = "Fraps Join"
 
-	Dim USAGE: USAGE = APP_EXE & " - USAGE:"
-	USAGE = USAGE & vbCrLf & "   1) Capture some video with Fraps..."
-	USAGE = USAGE & vbCrLf & "   2) Go to the capture folder in Windows Explorer"
-	USAGE = USAGE & vbCrLf & "   3) Sort files by Date (all files in a 'sequence' will have the same Modified Date)"
-	USAGE = USAGE & vbCrLf & "   4) Select Fraps files from the 'sequence' you want to work with"
-	USAGE = USAGE & vbCrLf & "        (Suggest you create a new folder for them)"
-	USAGE = USAGE & vbCrLf & "   5) Right-click, 'Send To', '" & APP_EXE & "' (or whatever the shortcut is named)"
-	USAGE = USAGE & vbCrLf & "        Script sorts the files by name and joins all files with an Avisynth script"
-	USAGE = USAGE & vbCrLf & "        Avisynth script has same name as first file in sequence,"
-	USAGE = USAGE & vbCrLf & "        except starts with an optional prefix and has an 'avs' extension"
-	USAGE = USAGE & vbCrLf & "   NOTE: you can also drag the files to a shortcut on the Desktop etc"
-	USAGE = USAGE & vbCrLf & "   6) Open the new script in any application that supports Avisynth:"
-	USAGE = USAGE & vbCrLf & "        VirtualDub, WinFF, StaxRip, XMedia, etc"
-	USAGE = USAGE & vbCrLf & "   NOTE: all files must be same resolution and frame rate or they won't join"
+    Dim USAGE: USAGE = APP_EXE & " - USAGE:"
+    USAGE = USAGE & vbCrLf & "   1) Capture some video with Fraps..."
+    USAGE = USAGE & vbCrLf & "   2) Go to the capture folder in Windows Explorer"
+    USAGE = USAGE & vbCrLf & "   3) Sort files by Date (all files in a 'sequence' will have the same Modified Date)"
+    USAGE = USAGE & vbCrLf & "   4) Select Fraps files from the 'sequence' you want to work with"
+    USAGE = USAGE & vbCrLf & "        (Suggest you create a new folder for them)"
+    USAGE = USAGE & vbCrLf & "   5) Right-click, 'Send To', '" & APP_EXE & "' (or whatever the shortcut is named)"
+    USAGE = USAGE & vbCrLf & "        Script sorts the files by name and joins all files with an Avisynth script"
+    USAGE = USAGE & vbCrLf & "        Avisynth script has same name as first file in sequence,"
+    USAGE = USAGE & vbCrLf & "        except starts with an optional prefix and has an 'avs' extension"
+    USAGE = USAGE & vbCrLf & "   NOTE: you can also drag the files to a shortcut on the Desktop etc"
+    USAGE = USAGE & vbCrLf & "   6) Open the new script in any application that supports Avisynth:"
+    USAGE = USAGE & vbCrLf & "        VirtualDub, WinFF, StaxRip, XMedia, etc"
+    USAGE = USAGE & vbCrLf & "   NOTE: all files must be same resolution and frame rate or they won't join"
 
     Const ForWriting = 2
 
-	'arguments = a set of AVI files;
-	'copy to local array
-	'
+    'arguments = a set of AVI files;
+    'copy to local array
+    '
     Dim countArgs: countArgs = WScript.Arguments.Count
     If (countArgs = 0) Then
         MsgBox USAGE, vbExclamation, APP_TITLE 
@@ -101,16 +101,16 @@ Public gLastError 'message from most recent error, if any
         Next
     Next
 
-	Dim aviPath: aviPath = gFSO.GetAbsolutePathName(args(0))
+    Dim aviPath: aviPath = gFSO.GetAbsolutePathName(args(0))
 
     Dim avsPath: avsPath = gFSO.GetParentFolderName(aviPath) & "\" & avsPrefix & gFSO.GetBaseName(aviPath) & ".avs"
 
     'create output file
-	'
+    '
     If (gFSO.FileExists(avsPath)) Then
-		If (MsgBox(avsPath & vbCrLf & "exists: overwrite it?", vbYesNo Or vbQuestion, APP_TITLE) = vbNo) Then
-			WScript.Quit
-		End If
+        If (MsgBox(avsPath & vbCrLf & "exists: overwrite it?", vbYesNo Or vbQuestion, APP_TITLE) = vbNo) Then
+            WScript.Quit
+        End If
         gFSO.DeleteFile(avsPath)
     End If
 
@@ -118,61 +118,61 @@ Public gLastError 'message from most recent error, if any
     If (Err) Then
         MsgBox "can't open '" & avsPath & "' for writing: " & Err.Description, vbExclamation, APP_TITLE
         ts.Close
-		gFSO.DeleteFile(avsPath)
-		WScript.Quit
+        gFSO.DeleteFile(avsPath)
+        WScript.Quit
     End If
 
-	'first line (some applications need this comment line to process Avisynth correctly)
-	ts.WriteLine "#avisynth" & vbCrLf
+    'first line (some applications need this comment line to process Avisynth correctly)
+    ts.WriteLine "#avisynth" & vbCrLf
 
-	Dim datecheck, extensions, firstfile, nextfile, postproc
-	
-	datecheck = UnQuoteString(SafeDictItem(dict, "datecheck", "1"))
-	extensions = UnQuoteString(SafeDictItem(dict, "extensions", "|avi|"))
-	firstfile = UnQuoteString(SafeDictItem(dict, "firstfile", "C = AviSource(`%1%`, pixel_type=`RGB32`)"))
-	nextfile = UnQuoteString(SafeDictItem(dict, "nextfile", "C = C + AviSource(`%1%`, pixel_type=`RGB32`)"))
-	postproc = UnQuoteString(SafeDictItem(dict, "postproc", ""))
+    Dim datecheck, extensions, firstfile, nextfile, postproc
+    
+    datecheck = UnQuoteString(SafeDictItem(dict, "datecheck", "1"))
+    extensions = UnQuoteString(SafeDictItem(dict, "extensions", "|avi|"))
+    firstfile = UnQuoteString(SafeDictItem(dict, "firstfile", "C = AviSource(`%1%`, pixel_type=`RGB32`)"))
+    nextfile = UnQuoteString(SafeDictItem(dict, "nextfile", "C = C + AviSource(`%1%`, pixel_type=`RGB32`)"))
+    postproc = UnQuoteString(SafeDictItem(dict, "postproc", ""))
 
-	datecheck = SafeBoolean(datecheck, True)
-	firstfile = Replace(firstfile, "`", """")
-	nextfile = Replace(nextfile, "`", """")
-	postproc = Replace(postproc, "`", """")
+    datecheck = SafeBoolean(datecheck, True)
+    firstfile = Replace(firstfile, "`", """")
+    nextfile = Replace(nextfile, "`", """")
+    postproc = Replace(postproc, "`", """")
 
     'process command line args, adding a line for each file:
-	'
-	CheckExtension extensions, aviPath, avsPath, ts
-	ts.WriteLine Replace(firstfile, "%1%", aviPath)
+    '
+    CheckExtension extensions, aviPath, avsPath, ts
+    ts.WriteLine Replace(firstfile, "%1%", aviPath)
 
-	Dim firstDate, nextDate
-	
-	firstDate = gFSO.GetFile(aviPath).DateLastModified
-	CheckError 10, avsPath, ts
+    Dim firstDate, nextDate
+    
+    firstDate = gFSO.GetFile(aviPath).DateLastModified
+    CheckError 10, avsPath, ts
 
     For i = 1 To (countArgs - 1)
 
-		aviPath = gFSO.GetAbsolutePathName(args(i))
-		
-		CheckExtension extensions, aviPath, avsPath, ts
+        aviPath = gFSO.GetAbsolutePathName(args(i))
+        
+        CheckExtension extensions, aviPath, avsPath, ts
 
-		nextDate = gFSO.GetFile(aviPath).DateLastModified
-		CheckError 20, avsPath, ts
+        nextDate = gFSO.GetFile(aviPath).DateLastModified
+        CheckError 20, avsPath, ts
 
-		If (datecheck) Then
-			If ((Abs(firstDate - nextDate) * 86400) > 1) Then
-				MsgBox "Join halted: file date mismatch for '" & gFSO.GetBaseName(aviPath) & "'", vbInformation, APP_TITLE
-				Exit For
-			End If
-		End If
+        If (datecheck) Then
+            If ((Abs(firstDate - nextDate) * 86400) > 1) Then
+                MsgBox "Join halted: file date mismatch for '" & gFSO.GetBaseName(aviPath) & "'", vbInformation, APP_TITLE
+                Exit For
+            End If
+        End If
 
-		ts.WriteLine Replace(nextfile, "%1%", aviPath)
+        ts.WriteLine Replace(nextfile, "%1%", aviPath)
     Next
 
-	'optional postprocessing
-	ts.WriteLine Replace(postproc, "%1%", gFSO.GetBaseName(args(0)))
+    'optional postprocessing
+    ts.WriteLine Replace(postproc, "%1%", gFSO.GetBaseName(args(0)))
 
-	'final line
-	ts.WriteLine "return C"
-	ts.Close
+    'final line
+    ts.WriteLine "return C"
+    ts.Close
 
 WScript.Quit
 'END ############
@@ -182,12 +182,12 @@ WScript.Quit
 '
 Sub CheckError(ByVal code, ByVal avsPath, ts)
 
-	If (Err) Then
-		MsgBox "Error creating Avisynth script (" & code & "): " & Err.Description, vbExclamation, APP_TITLE
-		ts.Close
-		gFSO.DeleteFile(avsPath)
-		WScript.Quit
-	End If
+    If (Err) Then
+        MsgBox "Error creating Avisynth script (" & code & "): " & Err.Description, vbExclamation, APP_TITLE
+        ts.Close
+        gFSO.DeleteFile(avsPath)
+        WScript.Quit
+    End If
 End Sub
 
 '********************************
@@ -195,12 +195,12 @@ End Sub
 '
 Sub CheckExtension(ByVal extensions, ByVal aviPath, ByVal avsPath, ts)
 
-	If (InStr(1, extensions, "|" & gFSO.GetExtensionName(aviPath) & "|", vbTextCompare) = 0) Then
-		MsgBox "Invalid file extension: " & gFSO.GetExtensionName(aviPath), vbExclamation, APP_TITLE
-		ts.Close
-		gFSO.DeleteFile(avsPath)
-		WScript.Quit
-	End If
+    If (InStr(1, extensions, "|" & gFSO.GetExtensionName(aviPath) & "|", vbTextCompare) = 0) Then
+        MsgBox "Invalid file extension: " & gFSO.GetExtensionName(aviPath), vbExclamation, APP_TITLE
+        ts.Close
+        gFSO.DeleteFile(avsPath)
+        WScript.Quit
+    End If
 End Sub
 
 '********************************
@@ -292,7 +292,7 @@ Function IniReadSection(ByVal iniPath, ByVal sSection, dict) 'As Boolean
         End If
     Loop
     ts.Close
-	Err.Clear
+    Err.Clear
     IniReadSection = True
 End Function
 
@@ -310,14 +310,14 @@ Function SafeBoolean(ByVal v, ByVal defval) 'As Boolean
     
     If (s = "true") Then     
         SafeBoolean = True
-	Else
-		Dim t: t = CInt(v)
-		If (Err) Then
-			Err.Clear
-			SafeBoolean = defval
-			Exit Function
-		End If
-		SafeBoolean = (v <> 0)
+    Else
+        Dim t: t = CInt(v)
+        If (Err) Then
+            Err.Clear
+            SafeBoolean = defval
+            Exit Function
+        End If
+        SafeBoolean = (v <> 0)
     End If
 End Function
 
@@ -338,11 +338,11 @@ Sub TestObject(obj, ByVal strTest)
 
     On Error Resume Next
 
-	Dim t: t = TypeName(obj) 
+    Dim t: t = TypeName(obj) 
     If (InStr(1, t, strTest, vbTextCompare) = 0) Then
-		If (Err) Then
-			t = t & ": " & Err.Description
-		End If
+        If (Err) Then
+            t = t & ": " & Err.Description
+        End If
         MsgBox "Error initializing " & strTest & ": " & t, vbExclamation, APP_TITLE
         WScript.Quit
     End If
