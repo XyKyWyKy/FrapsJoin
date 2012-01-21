@@ -1,7 +1,6 @@
-FrapsJoin: append Fraps AVI segments by generating an AviSynth script
+FrapsJoin: rename Fraps videos grouped by recording
 Requirements:
-	Fraps (http://www.fraps.com/)
-	AviSynth (http://avisynth.org/)
+    Fraps (http://www.fraps.com/)
 
 Fraps is a program that captures Windows gameplay as AVI video files. For reasons
 of backward compatibility, the video files are limited to 4 GB in size, so a long
@@ -9,46 +8,62 @@ recording will consist of many 4 GB movies that must be joined with a video edit
 This is a source of annoyance for many people and has widely been regarded as a
 bad move.
 
-This little script attempts to mitigate the situation by joining the movies quickly
-and easily. It does this using Avisynth. Avisynth is a frameserver that can process
-video sources in various ways and make available a 'virtual' video source. You open
-the FrapsJoin-generated Avisynth script in any video editor that supports AviSynth
-as a video source.
+This little script attempts to mitigate the situation by renaming the videos,
+grouped by recording. All files which represent a continuous recording are given a
+common name, followed by a 3-digit serial number. The files can then be joined
+automatically by VirtualDub, and possibly other video editors.
+
+FrapsJoin can also generate *scripts* for three different applications: Avidemux,
+AviSynth and Virtualdub. In addition, you can write your own postprocessing commands:
+
+ * using AviSynth, you can do color correction, resizing etc;
+
+ * using Virtualdub, you can do that too, plus you can set compression
+   settings and save the final video if you wish. You can run the script
+   using VirtualDub's command line interface (vdub.exe).
+
+Review the included INI file and samples for help & more options.
 
 INSTALL:
-   1) copy the FrapsJoin project files to any location, eg "C:\Program Files (x86)\FrapsJoin"
+   Copy the FrapsJoin project files to any location, eg,
+   "<My Documents>\FrapsJoin". Then choose one or more
+   of the following ways to use the script:
 
-   2) in Windows Explorer, right-click the script, "Copy"
+   * SEND TO mode installation: right-click the script, "Copy";
+     in the Explorer navigation bar, type "shell:sendto", Enter;
+     right-click in the Send To folder, "Paste Shortcut"
 
-   3) in the Explorer navigation bar, type "shell:sendto", Enter
+     To launch, right-click any AVI file in your Fraps folder,
+     select "Send To", FrapsJoin
 
-   4) right-click, "Paste Shortcut"
+   * DRAG AND DROP MODE installation: right-click the script, "Copy";
+     right-click on the Desktop, "Paste Shortcut"
 
-   5) review the "FrapsJoin.ini" file for script tweaking (optional)
+     To launch, drag any AVI file in your Fraps folder to the
+     FrapsJoin shortcut
+
+   * To launch in OPEN WITH mode, right click any AVI file,
+     "Open With...", browse to FrapsJoin.bat; 'FrapsJoin' should be
+     retained in your "Open With" menu for future use.
 
 USAGE:
-   1) Capture some video with Fraps...
+   * Capture some video with Fraps...
 
-   2) Go to the capture folder in Windows Explorer
+   * Go to the capture folder in Windows Explorer
 
-   3) Sort files by Date (all files in a 'sequence' will have the same Modified Date)
+   * Launch FrapsJoin using one of the three ways described above;
+     for each group of videos you will be prompted for a 'group name';
+     hit Enter to accept the default (default = first file name)
 
-   4) Select Fraps files from the 'sequence' you want to work with
-
-   5) Right-click, 'Send To', 'FrapsJoin.vbs' (or whatever the shortcut is named)
-        Script sorts the files by name and joins all files with an Avisynth script
-        Avisynth script has same name as first file in sequence,
-        except starts with an optional prefix and has an 'avs' extension
-
-   NOTE: you can also drag the files to a shortcut on the Desktop etc
-
-   6) Open the new script in any application that supports Avisynth:
-        VirtualDub, WinFF, StaxRip, XMedia, etc
-
-   NOTE: all files must be same resolution and frame rate or they won't join
+   * Open the first file (suffix "-00") in VirtualDub; then use File menu,
+     "Append Avi Segment...", select the next file in the group (suffix "-01"),
+     and check "Autodetect additional segments"; VirtualDub does the rest.
 
 SUPPORT:
-	I am user 'raffriff' on frapsforum.com, an unofficial Fraps discussion board
+    I am user 'raffriff' on frapsforum.com, an unofficial Fraps discussion board
+
+APPRECIATION:
+    This is a modest update of a contribution by user koala85 on the above forum.
 
 copyright 2012 Lindsay Bigelow (aka raffriff aka XyKyWyKy)
 
@@ -66,4 +81,6 @@ copyright 2012 Lindsay Bigelow (aka raffriff aka XyKyWyKy)
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
  Fraps is a trademark of Beepa Pty Ltd
- AviSynth is free software under GNU General Public License.
+ AviSynth   is free software under the GNU General Public License.
+ Avidemux   is free software under the GNU General Public License.
+ VirtualDub is free software under the GNU General Public License.

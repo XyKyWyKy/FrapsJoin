@@ -1,0 +1,11 @@
+// ** sample VirtualDub postprocessing script for FrapsJoin
+// description: set video & audio to stream copy mode; save to AVI
+VirtualDub.audio.SetSource(1);
+VirtualDub.audio.SetMode(0);
+VirtualDub.video.SetInputFormat(0);
+VirtualDub.video.SetOutputFormat(7);
+VirtualDub.video.SetMode(0);
+VirtualDub.SaveAVI(%1);
+VirtualDub.Close();
+
+
