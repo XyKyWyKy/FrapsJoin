@@ -15,9 +15,9 @@ common name, followed by a 3-digit serial number. The files can then be joined
 automatically by VirtualDub, and possibly other video editors.
 
 FrapsJoin can also generate *scripts* for three different applications: Avidemux,
-AviSynth and Virtualdub. In addition, you can write your own postprocessing commands:
+Avisynth and Virtualdub. In addition, you can write your own postprocessing commands:
 
- * using AviSynth, you can do color correction, resizing etc;
+ * using Avisynth, you can do color correction, resizing etc;
 
  * using Virtualdub, you can do that too, plus you can set compression
    settings and save the final video if you wish. You can run the script
@@ -82,6 +82,6 @@ copyright 2012 Lindsay Bigelow (aka raffriff aka XyKyWyKy)
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
  Fraps is a trademark of Beepa Pty Ltd
- AviSynth   is free software under the GNU General Public License.
+ Avisynth   is free software under the GNU General Public License.
  Avidemux   is free software under the GNU General Public License.
  VirtualDub is free software under the GNU General Public License.

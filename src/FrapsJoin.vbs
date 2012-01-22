@@ -12,6 +12,7 @@
 ' raffriff update 18-Jan-2012 (user options from INI file; tweak error handling)
 ' raffriff update 20-Jan-2012 (add optional VirtualDub script generation)
 ' raffriff update 21-Jan-2012 (add optional VirtualDub output path)
+' raffriff update 22-Jan-2012 (add optional output filename prefix)
 '
 ' copyright 2012 Lindsay Bigelow (aka raffriff aka XyKyWyKy)
 '
@@ -101,16 +102,17 @@ Const APP_TITLE = "FrapsJoin"
     Dim makeUndo:     makeUndo = SafeBoolean(SafeDictItem(dict, "makeUndo", "true"), True)
     Dim undoCleanup:  undoCleanup = SafeBoolean(SafeDictItem(dict, "undoCleanup", "true"), True)
     Dim makeAvidemux: makeAvidemux = SafeBoolean(SafeDictItem(dict, "makeAvidemux", "false"), False)
-    Dim makeAviSynth: makeAviSynth = SafeBoolean(SafeDictItem(dict, "makeAviSynth", "false"), False)
+    Dim makeAvisynth: makeAvisynth = SafeBoolean(SafeDictItem(dict, "makeAvisynth", "false"), False)
     Dim makeVirtDub:  makeVirtDub = SafeBoolean(SafeDictItem(dict, "makeVirtDub", "false"), False)
     Dim avisextra:    avisextra = UnQuoteString(SafeDictItem(dict, "avisynth_extra_script", ""))
     Dim vdubextra:    vdubextra = UnQuoteString(SafeDictItem(dict, "virtualdub_extra_script", ""))
     Dim vduboutpath:  vduboutpath = UnQuoteString(SafeDictItem(dict, "virtualdub_output_path", gWorkPath))
+    Dim outprefix:    outprefix = UnQuoteString(SafeDictItem(dict, "output_prefix", APP_TITLE & "-"))
 
 '    StatMsg "makeUndo: " & makeUndo & vbCrLf & _
 '            "undoCleanup: " & undoCleanup & vbCrLf & _
 '            "makeAvidemux: " & makeAvidemux & vbCrLf & _
-'            "makeAviSynth: " & makeAviSynth & vbCrLf & _
+'            "makeAvisynth: " & makeAvisynth & vbCrLf & _
 '            "makeVirtDub: " & makeVirtDub & vbCrLf & _
 '            "avisextra: " & avisextra & vbCrLf & _
 '            "vdubextra: " & vdubextra & vbCrLf & _
@@ -154,12 +156,13 @@ Const APP_TITLE = "FrapsJoin"
     
     Dim adscriptpath, avscriptpath, vdscriptpath
     Dim matches, match
-    Dim firstname, newname
-    Dim savename, joinname
+    Dim groupname, newname
+    Dim savename, joinpath
     Dim groupdate, curdate
     Dim f, prev
 
-    Const defprompt = "Enter name for this group of videos, or hit Enter to accept the default:"
+    Const defprompt1 = "Enter name for this group of videos, or hit Enter to accept the default:"
+    Const defprompt2 = "Please enter another file name:"
     
     '** search for "* YYYY-MM-DD HH-MM-SS-ms.avi"
     Dim regex: Set regex = CreateObject("VBScript.RegExp")
@@ -184,13 +187,13 @@ Const APP_TITLE = "FrapsJoin"
             
             If (index = 0) Then
                 If (makeAvidemux) Then
-                    ad_final adscript, savename
+                    finalAvidemux adscript, savename
                 End If
-                If (makeAviSynth) Then
-                    av_final avscript, avisextra
+                If (makeAvisynth) Then
+                    finalAvisynth avscript, avisextra
                 End If
                 If (makeVirtDub) Then
-                    vd_final vdscript, vdubextra, joinname
+                    finalVirtualdub vdscript, vdubextra, joinpath
                 End If
             End If
             
@@ -203,23 +206,26 @@ Const APP_TITLE = "FrapsJoin"
                 '
                 ' rename first video to *-00.avi
                 '
-                Dim prompt: prompt = defprompt
+                Dim prompt: prompt = defprompt1
                 Do
-                    firstname = InputBox(prompt, APP_TITLE, match.submatches(0) & " " & match.submatches(1) & " " & match.submatches(2))
-                    If (Len(firstname) = 0) Then
+                    groupname = InputBox(prompt, APP_TITLE, _
+                                         match.submatches(0) & " " & _
+                                         match.submatches(1) & " " & _
+                                         match.submatches(2))
+                    If (Len(groupname) = 0) Then
+                        '** user canceled
                         If (makeUndo) Then
-                          '** user canceled
-                          On Error Resume Next
-                          uu.Close
-                          Err.Clear
+                            On Error Resume Next
+                            uu.Close
+                            Err.Clear
                         End If
                         QuitScript 1
                     End If
-                    newname = firstname & "-" & zstr(0, 3) & ".avi"
+                    newname = groupname & "-" & zstr(0, 3) & ".avi"
                     If (False = gFSO.FileExists(gWorkPath & "\" & newname)) Then
                         Exit Do
                     Else
-                        prompt = "'" & newname & "' exists: " & vbCrLf & defprompt
+                        prompt = "'" & newname & "' exists: " & vbCrLf & defprompt1
                     End If
                 Loop
 
@@ -235,14 +241,15 @@ Const APP_TITLE = "FrapsJoin"
                 If (makeAvidemux) Then
                     '** start avidemux script
                     On Error Resume Next
-                    adscriptpath = APP_TITLE & "-" & firstname & ".js"
+                    adscriptpath = outprefix & groupname & ".js"
                     Set adscript = dd.CreateTextFile(adscriptpath, True)
                     adscriptpath = gWorkPath & "\" & adscriptpath
                     adscript.WriteLine "//AD" & vbCrLf
                     adscript.WriteLine "var app = new Avidemux();" & vbCrLf
                     adscript.WriteLine "app.load(""" & dpath & newname & """);"
                     If (Err) Then
-                        MsgBox "can't write to '" & adscriptpath & "': " & Err.Description, vbExclamation, APP_TITLE
+                        MsgBox "can't write to '" & adscriptpath & "': " & Err.Description, _
+                               vbExclamation, APP_TITLE
                         adscript.Close
                         gFSO.DeleteFile (adscriptpath)
                         If (makeUndo) Then
@@ -256,19 +263,20 @@ Const APP_TITLE = "FrapsJoin"
                         QuitScript 0
                     End If
                     On Error GoTo 0
-                    savename = dpath & firstname & "-compressed.mp4"
+                    savename = dpath & groupname & "-compressed.mp4"
                 End If
 
-                If (makeAviSynth) Then
-                    '** start avisynth script
+                If (makeAvisynth) Then
+                    '** start Avisynth script
                     On Error Resume Next
-                    avscriptpath = APP_TITLE & "-" & firstname & ".avs"
+                    avscriptpath = outprefix & groupname & ".avs"
                     Set avscript = dd.CreateTextFile(avscriptpath, True)
                     avscriptpath = gWorkPath & "\" & avscriptpath
-                    avscript.WriteLine "#avisynth" & vbCrLf
+                    avscript.WriteLine "#Avisynth" & vbCrLf
                     avscript.WriteLine "C = AviSource(""" & prev.Path & """)"
                     If (Err) Then
-                        MsgBox "can't write to '" & avscriptpath & "': " & Err.Description, vbExclamation, APP_TITLE
+                        MsgBox "can't write to '" & avscriptpath & "': " & Err.Description, _
+                               vbExclamation, APP_TITLE
                         avscript.Close
                         gFSO.DeleteFile (avscriptpath)
                         If (makeUndo) Then
@@ -287,7 +295,7 @@ Const APP_TITLE = "FrapsJoin"
                 If (makeVirtDub) Then
                     '** start V-dub script
                     On Error Resume Next
-                    vdscriptpath = APP_TITLE & "-" & firstname & ".vcf"
+                    vdscriptpath = outprefix & groupname & ".vcf"
                     Set vdscript = dd.CreateTextFile(vdscriptpath, True)
                     vdscriptpath = gWorkPath & "\" & vdscriptpath
                     vdscript.WriteLine "VirtualDub.Open(""" & Replace(prev.Path, "\", "\\") & """);"
@@ -307,13 +315,30 @@ Const APP_TITLE = "FrapsJoin"
                         QuitScript 0
                     End If
                     On Error GoTo 0
-                    joinname = vduboutpath & "\" & firstname & "-join.avi"
+
+                    Dim joinname: joinname = outprefix & groupname & ".avi"                     
+
+                    joinpath = vduboutpath & "\" & joinname
+                    Do While (gFSO.FileExists(joinpath))
+
+                        joinname = InputBox(defprompt2 & Err.Description, APP_TITLE, joinname)
+                        If (Len(joinname) = 0) Then
+                            '** user canceled
+                            If (makeUndo) Then
+                                On Error Resume Next
+                                uu.Close
+                                Err.Clear
+                            End If
+                            QuitScript 1
+                        End If
+                        joinpath = vduboutpath & "\" & joinname
+                    Loop
                 End If
             End If
             
             If (index > 0) Then
                 
-                newname = firstname & "-" & zstr(index, 3) & ".avi"
+                newname = groupname & "-" & zstr(index, 3) & ".avi"
                 
                 'StatMsg "rename " & f.Name & " to " & newname
                 If (makeUndo) Then
@@ -326,7 +351,7 @@ Const APP_TITLE = "FrapsJoin"
                     adscript.WriteLine "app.append(""" & dpath & newname & """);"
                 End If
 
-                If (makeAviSynth) Then
+                If (makeAvisynth) Then
                     avscript.WriteLine "C = C + AviSource(""" & f.Path & """)"
                 End If
 
@@ -348,7 +373,7 @@ Const APP_TITLE = "FrapsJoin"
             If (makeAvidemux) Then
                 uu.WriteLine "del """ & adscriptpath & """"
             End If
-            If (makeAviSynth) Then
+            If (makeAvisynth) Then
                 uu.WriteLine "del """ & avscriptpath & """"
             End If
             If (makeVirtDub) Then
@@ -361,17 +386,17 @@ Const APP_TITLE = "FrapsJoin"
     End If
 
     If (makeAvidemux) Then
-        ad_final adscript, savename
+        finalAvidemux adscript, savename
         Err.Clear
     End If
 
-    If (makeAviSynth) Then
-        av_final avscript, avisextra
+    If (makeAvisynth) Then
+        finalAvisynth avscript, avisextra
         Err.Clear
     End If
 
     If (makeVirtDub) Then
-        vd_final vdscript, vdubextra, joinname
+        finalVirtualdub vdscript, vdubextra, joinpath
         Err.Clear
     End If
 
@@ -380,7 +405,8 @@ Const APP_TITLE = "FrapsJoin"
         gFSO.DeleteFile (upath)
         Err.Clear
     Else
-        StatMsg "renamed " & renamecount & " files; use " & APP_TITLE & "-undo.bat to undo"
+        StatMsg "renamed " & renamecount & " files; use " & _
+                gFSO.GetBaseName(upath) & ".bat to undo"
     End If
 
     QuitScript 0
@@ -391,7 +417,7 @@ Const APP_TITLE = "FrapsJoin"
 '********************************
 '** finalize Avidemux script
 '
-Sub ad_final(adscript, ByVal savename)
+Sub finalAvidemux(adscript, ByVal savename)
 
     If (adscript Is Nothing) Then
         Exit Sub
@@ -404,9 +430,9 @@ Sub ad_final(adscript, ByVal savename)
 End Sub
  
 '********************************
-'** finalize AviSynth script
+'** finalize Avisynth script
 '
-Sub av_final(avscript, avisextra)
+Sub finalAvisynth(avscript, avisextra)
 
     If (avscript Is Nothing) Then
         Exit Sub
@@ -427,7 +453,7 @@ Sub av_final(avscript, avisextra)
         pathAvisScript = gWorkPath & "\" & avisextra
     Else
         If (len(avisextra) > 0) Then
-            StatMsg "AviSynth extra script '" & avisextra & "' not found; ignoring"
+            StatMsg "Avisynth extra script '" & avisextra & "' not found; ignoring"
             avisextra = ""
         End If
         avscript.Close
@@ -460,6 +486,74 @@ Sub av_final(avscript, avisextra)
 
 End Sub
 
+'********************************
+'** finalize VirtualDub script
+'
+Sub finalVirtualdub(vdscript, vdubextra, ByVal joinpath)
+
+    If (vdscript Is Nothing) Then
+        Exit Sub
+    End If
+    
+    'optional postprocessing
+    'look for file in explicit path first, userscripts folder second, working folder third
+    
+    Dim scriptBasePath: scriptBasePath = gFSO.GetParentFolderName(ScriptPath())
+    Dim pathVdubScript: pathVdubScript = ""
+    
+    If (gFSO.FileExists(vdubextra)) Then
+        pathVdubScript = vdubextra
+    ElseIf (gFSO.FileExists(scriptBasePath & "\userscripts\" & vdubextra)) Then
+        pathVdubScript = scriptBasePath & "\userscripts\" & vdubextra
+    ElseIf (gFSO.FileExists(gWorkPath & "\" & vdubextra)) Then
+        pathVdubScript = gWorkPath & "\" & vdubextra
+    Else
+        If (len(vdubextra) > 0) Then
+            StatMsg "VirtualDub extra script '" & vdubextra & "' not found; ignoring"
+            vdubextra = ""
+        End If
+        vdscript.Close
+        Set vdscript = Nothing
+        Err.Clear
+        Exit Sub
+    End If
+    
+    On Error Resume Next
+
+    Dim ts: Set ts = gFSO.OpenTextFile(pathVdubScript, 1) 'ForReading
+    If (Err) Then
+        StatMsg "Error opening '" & pathVdubScript & "': " & Err.Description
+        ts.Close
+        vdscript.Close
+        Set vdscript = Nothing
+        Err.Clear
+        Exit Sub
+    End If
+
+    Dim joinavi: joinavi = Replace(joinpath, "\", "\\")
+    Dim joinwav: joinwav = Left(joinavi, Len(joinavi) - 4) & ".wav"
+    Dim sLine
+
+    Do While Not (ts.AtEndOfStream)
+        sLine = ts.ReadLine
+        If (InStr(1, sLine, ".Save", vbTextCompare) > 0) Then
+            If (InStr(1, sLine, ".SaveWAV", vbTextCompare) > 0) Then
+                joinpath = joinwav  
+            Else
+                joinpath = joinavi  
+            End If                  
+            sLine = Replace(sLine, "%1%", "%1")
+            sLine = Replace(sLine, "%1", """" & joinpath & """")
+        End If
+        vdscript.WriteLine sLine
+    Loop
+    ts.Close
+    vdscript.Close
+    Set vdscript = Nothing
+    Err.Clear
+
+End Sub
+ 
 '********************************
 '** read all name-value pairs from an .INI file section into a Dictionary object
 '
@@ -667,74 +761,6 @@ Function UnQuoteString(ByVal src)
     UnQuoteString = src
 End Function
 
-'********************************
-'** finalize VirtualDub script
-'
-Sub vd_final(vdscript, vdubextra, ByVal joinname)
-
-    If (vdscript Is Nothing) Then
-        Exit Sub
-    End If
-    
-    'optional postprocessing
-    'look for file in explicit path first, userscripts folder second, working folder third
-    
-    Dim scriptBasePath: scriptBasePath = gFSO.GetParentFolderName(ScriptPath())
-    Dim pathVdubScript: pathVdubScript = ""
-    
-    If (gFSO.FileExists(vdubextra)) Then
-        pathVdubScript = vdubextra
-    ElseIf (gFSO.FileExists(scriptBasePath & "\userscripts\" & vdubextra)) Then
-        pathVdubScript = scriptBasePath & "\userscripts\" & vdubextra
-    ElseIf (gFSO.FileExists(gWorkPath & "\" & vdubextra)) Then
-        pathVdubScript = gWorkPath & "\" & vdubextra
-    Else
-        If (len(vdubextra) > 0) Then
-            StatMsg "VirtualDub extra script '" & vdubextra & "' not found; ignoring"
-            vdubextra = ""
-        End If
-        vdscript.Close
-        Set vdscript = Nothing
-        Err.Clear
-        Exit Sub
-    End If
-    
-    On Error Resume Next
-
-    Dim ts: Set ts = gFSO.OpenTextFile(pathVdubScript, 1) 'ForReading
-    If (Err) Then
-        StatMsg "Error opening '" & pathVdubScript & "': " & Err.Description
-        ts.Close
-        vdscript.Close
-        Set vdscript = Nothing
-        Err.Clear
-        Exit Sub
-    End If
-
-    Dim joinavi: joinavi = Replace(joinname, "\", "\\")
-    Dim joinwav: joinwav = Left(joinavi, Len(joinavi) - 4) & ".wav"
-    Dim sLine
-
-    Do While Not (ts.AtEndOfStream)
-        sLine = ts.ReadLine
-        If (InStr(1, sLine, ".Save", vbTextCompare) > 0) Then
-            If (InStr(1, sLine, ".SaveWAV", vbTextCompare) > 0) Then
-                joinname = joinwav  
-            Else
-                joinname = joinavi  
-            End If                  
-            sLine = Replace(sLine, "%1%", "%1")
-            sLine = Replace(sLine, "%1", """" & joinname & """")
-        End If
-        vdscript.WriteLine sLine
-    Loop
-    ts.Close
-    vdscript.Close
-    Set vdscript = Nothing
-    Err.Clear
-
-End Sub
- 
 '********************************
 '** return zero-padded number
 '
