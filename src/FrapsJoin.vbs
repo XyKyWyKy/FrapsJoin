@@ -11,6 +11,7 @@
 ' raffriff update 18-Jan-2012 (user-specified group name; support 100+ files; limit unknown)
 ' raffriff update 18-Jan-2012 (user options from INI file; tweak error handling)
 ' raffriff update 20-Jan-2012 (add optional VirtualDub script generation)
+' raffriff update 21-Jan-2012 (add optional VirtualDub output path)
 '
 ' copyright 2012 Lindsay Bigelow (aka raffriff aka XyKyWyKy)
 '
@@ -73,8 +74,10 @@ Const APP_TITLE = "FrapsJoin"
 
     On Error GoTo 0
     
+    gWorkPath = dd.Path
+
     '** no Name property if network share?
-    Dim ddName: ddName = Mid(dd.Path, InStrRev(dd.Path, "\") + 1)
+    Dim ddName: ddName = Mid(gWorkPath, InStrRev(gWorkPath, "\") + 1)
 
     If (MsgBox(APP_TITLE & " will group Fraps videos in folder '" & ddName & "' by recording; " & vbCrLf & _
                "it will rename files, but there will be a batch file to undo the changes; " & vbCrLf & _
@@ -102,6 +105,7 @@ Const APP_TITLE = "FrapsJoin"
     Dim makeVirtDub:  makeVirtDub = SafeBoolean(SafeDictItem(dict, "makeVirtDub", "false"), False)
     Dim avisextra:    avisextra = UnQuoteString(SafeDictItem(dict, "avisynth_extra_script", ""))
     Dim vdubextra:    vdubextra = UnQuoteString(SafeDictItem(dict, "virtualdub_extra_script", ""))
+    Dim vduboutpath:  vduboutpath = UnQuoteString(SafeDictItem(dict, "virtualdub_output_path", gWorkPath))
 
 '    StatMsg "makeUndo: " & makeUndo & vbCrLf & _
 '            "undoCleanup: " & undoCleanup & vbCrLf & _
@@ -109,9 +113,9 @@ Const APP_TITLE = "FrapsJoin"
 '            "makeAviSynth: " & makeAviSynth & vbCrLf & _
 '            "makeVirtDub: " & makeVirtDub & vbCrLf & _
 '            "avisextra: " & avisextra & vbCrLf & _
-'            "vdubextra: " & vdubextra
+'            "vdubextra: " & vdubextra & vbCrLf & _
+'            "vduboutpath: " & vduboutpath
 
-    gWorkPath = dd.Path
     Dim dpath
     If (makeAvidemux) Then
         dpath = gWorkPath
@@ -125,7 +129,7 @@ Const APP_TITLE = "FrapsJoin"
 
     If (makeUndo) Then
 
-        upath = dd.Path & "\" & APP_TITLE & "-undo.bat"
+        upath = gWorkPath & "\" & APP_TITLE & "-undo.bat"
 
         If (gFSO.FileExists(upath)) Then
             gFSO.DeleteFile (upath)
@@ -212,7 +216,7 @@ Const APP_TITLE = "FrapsJoin"
                         QuitScript 1
                     End If
                     newname = firstname & "-" & zstr(0, 3) & ".avi"
-                    If (False = gFSO.FileExists(dd.Path & "\" & newname)) Then
+                    If (False = gFSO.FileExists(gWorkPath & "\" & newname)) Then
                         Exit Do
                     Else
                         prompt = "'" & newname & "' exists: " & vbCrLf & defprompt
@@ -233,7 +237,7 @@ Const APP_TITLE = "FrapsJoin"
                     On Error Resume Next
                     adscriptpath = APP_TITLE & "-" & firstname & ".js"
                     Set adscript = dd.CreateTextFile(adscriptpath, True)
-                    adscriptpath = dd.Path & "\" & adscriptpath
+                    adscriptpath = gWorkPath & "\" & adscriptpath
                     adscript.WriteLine "//AD" & vbCrLf
                     adscript.WriteLine "var app = new Avidemux();" & vbCrLf
                     adscript.WriteLine "app.load(""" & dpath & newname & """);"
@@ -260,7 +264,7 @@ Const APP_TITLE = "FrapsJoin"
                     On Error Resume Next
                     avscriptpath = APP_TITLE & "-" & firstname & ".avs"
                     Set avscript = dd.CreateTextFile(avscriptpath, True)
-                    avscriptpath = dd.Path & "\" & avscriptpath
+                    avscriptpath = gWorkPath & "\" & avscriptpath
                     avscript.WriteLine "#avisynth" & vbCrLf
                     avscript.WriteLine "C = AviSource(""" & prev.Path & """)"
                     If (Err) Then
@@ -285,7 +289,7 @@ Const APP_TITLE = "FrapsJoin"
                     On Error Resume Next
                     vdscriptpath = APP_TITLE & "-" & firstname & ".vcf"
                     Set vdscript = dd.CreateTextFile(vdscriptpath, True)
-                    vdscriptpath = dd.Path & "\" & vdscriptpath
+                    vdscriptpath = gWorkPath & "\" & vdscriptpath
                     vdscript.WriteLine "VirtualDub.Open(""" & Replace(prev.Path, "\", "\\") & """);"
                     If (Err) Then
                         MsgBox "can't write to '" & vdscriptpath & "': " & Err.Description, _
@@ -303,7 +307,7 @@ Const APP_TITLE = "FrapsJoin"
                         QuitScript 0
                     End If
                     On Error GoTo 0
-                    joinname = gWorkPath & "\" & firstname & "-join.avi"
+                    joinname = vduboutpath & "\" & firstname & "-join.avi"
                 End If
             End If
             
@@ -719,10 +723,7 @@ Sub vd_final(vdscript, vdubextra, ByVal joinname)
             Else
                 joinname = joinavi  
             End If                  
-            '** quotes not required around "%1", but accepted; etc
             sLine = Replace(sLine, "%1%", "%1")
-            sLine = Replace(sLine, """%1""", joinname)
-            sLine = Replace(sLine, "'%1'", """" & joinname & """")
             sLine = Replace(sLine, "%1", """" & joinname & """")
         End If
         vdscript.WriteLine sLine
