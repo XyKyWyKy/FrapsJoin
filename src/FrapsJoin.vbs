@@ -14,7 +14,7 @@
 ' raffriff update 21-Jan-2012 (add optional VirtualDub output path)
 ' raffriff update 22-Jan-2012 (add optional output filename prefix)
 ' raffriff update 27-Jan-2012 (optional output path for Avidemux also; minor bugfixes)
-' raffriff update 06-Feb-2012 (minor bugfix)
+' raffriff update 06-Feb-2012 (minor bugfix and improved error reports)
 '
 ' copyright 2012 Lindsay Bigelow (aka raffriff aka XyKyWyKy)
 '
@@ -43,12 +43,17 @@ Dim gMakeAvidemux   'if True, generate an Avidemux script
 Dim gMakeAvisynth   'if True, generate an Avidemux script
 Dim gMakeVirtDub    'if True, generate a VirtualDub script
 
-Dim gfUndo          'As File
+Dim gtsUndo          'As TextStream
+Dim gtsAvidemux
+Dim gtsAvisynth
+Dim gtsVirtualdub
+
 Dim gUndopath
 Dim gWorkPath
 Dim gAdScriptPath
 Dim gAvScriptPath
 Dim gVdScriptPath
+
 Dim gLastError      'message from most recent error, if any
 
 Const APP_TITLE = "FrapsJoin"
@@ -147,19 +152,16 @@ Const APP_TITLE = "FrapsJoin"
             Err.Clear
         End If
 
-        Set gfUndo = gFSO.OpenTextFile(gUndopath, 2, True) 'ForWriting
+        Set gtsUndo = gFSO.OpenTextFile(gUndopath, 2, True) 'ForWriting
         If (Err) Then
             MsgBox "can't open '" & gUndopath & "' for writing: " & Err.Description, vbExclamation, APP_TITLE
-            gfUndo.Close
+            gtsUndo.Close
             gFSO.DeleteFile (gUndopath)
             Err.Clear
             QuitScript 1
         End If
     End If
 
-    Dim adscript:    Set adscript = Nothing
-    Dim avscript:    Set avscript = Nothing
-    Dim vdscript:    Set vdscript = Nothing
     Dim index:       index = 0
     Dim renamecount: renamecount = 0
     Dim prevdate:    prevdate = 0
@@ -179,6 +181,10 @@ Const APP_TITLE = "FrapsJoin"
         StatMsg "Error (15): " & Err.Description
         QuitScript 1
     End If
+
+    Set gtsAvidemux = Nothing
+    Set gtsAvisynth = Nothing
+    Set gtsVirtualdub = Nothing
 
     For Each f In dd.Files 'note: ASSUMED files sorted by name or by date (doesn't matter which)
 
@@ -207,13 +213,13 @@ Const APP_TITLE = "FrapsJoin"
 
             If (index = 0) Then
                 If (gMakeAvidemux) Then
-                    finalAvidemux adscript, adsavepath
+                    finalAvidemux gtsAvidemux, adsavepath
                 End If
                 If (gMakeAvisynth) Then
-                    finalAvisynth avscript, avisextra
+                    finalAvisynth gtsAvisynth, avisextra
                 End If
                 If (gMakeVirtDub) Then
-                    finalVirtualdub vdscript, vdubextra, vdsavepath
+                    finalVirtualdub gtsVirtualdub, vdubextra, vdsavepath
                 End If
             End If
 
@@ -246,9 +252,9 @@ Const APP_TITLE = "FrapsJoin"
 
                 'StatMsg "rename " & prev.Name & " to " & newname
                 If (gMakeUndo) Then
-                    gfUndo.WriteLine "ren """ & newname & """ """ & prev.Name & """"
-                    gfUndo.WriteLine "if errorlevel 1 pause"
-                    gfUndo.WriteLine "if errorlevel 1 goto :EOF"
+                    gtsUndo.WriteLine "ren """ & newname & """ """ & prev.Name & """"
+                    gtsUndo.WriteLine "if errorlevel 1 pause"
+                    gtsUndo.WriteLine "if errorlevel 1 goto :EOF"
                     If (Err) Then
                         StatMsg "Can't write to undo file: " & Err.Description
                         QuitScript 1
@@ -265,14 +271,14 @@ Const APP_TITLE = "FrapsJoin"
                     '** start avidemux script
                     gAdScriptPath = PathCheck(gWorkPath, "generated Avidemux script name", outprefix, groupname, "js")
 
-                    Set adscript = dd.CreateTextFile(gFSO.GetBaseName(gAdScriptPath) & ".js", True)
-                    adscript.WriteLine "//AD" & vbCrLf
-                    adscript.WriteLine "var app = new Avidemux();" & vbCrLf
-                    adscript.WriteLine "app.load(""" & Replace(adsourcepath, "\", "/") & newname & """);"
+                    Set gtsAvidemux = dd.CreateTextFile(gFSO.GetBaseName(gAdScriptPath) & ".js", True)
+                    gtsAvidemux.WriteLine "//AD" & vbCrLf
+                    gtsAvidemux.WriteLine "var app = new Avidemux();" & vbCrLf
+                    gtsAvidemux.WriteLine "app.load(""" & Replace(adsourcepath, "\", "/") & newname & """);"
                     If (Err) Then
                         MsgBox "can't write to '" & gAdScriptPath & "': " & Err.Description, _
                                vbExclamation, APP_TITLE
-                        adscript.Close
+                        gtsAvidemux.Close
                         gFSO.DeleteFile (gAdScriptPath)
                         QuitScript 1
                     End If
@@ -284,13 +290,13 @@ Const APP_TITLE = "FrapsJoin"
                     '** start Avisynth script
                     gAvScriptPath = PathCheck(gWorkPath, "generated Avisynth script name", outprefix, groupname, "avs")
 
-                    Set avscript = dd.CreateTextFile(gFSO.GetBaseName(gAvScriptPath) & ".avs", True)
-                    avscript.WriteLine "#Avisynth" & vbCrLf
-                    avscript.WriteLine "C = AviSource(""" & prev.path & """)"
+                    Set gtsAvisynth = dd.CreateTextFile(gFSO.GetBaseName(gAvScriptPath) & ".avs", True)
+                    gtsAvisynth.WriteLine "#Avisynth" & vbCrLf
+                    gtsAvisynth.WriteLine "C = AviSource(""" & prev.path & """)"
                     If (Err) Then
                         MsgBox "can't write to '" & gAvScriptPath & "': " & Err.Description, _
                                vbExclamation, APP_TITLE
-                        avscript.Close
+                        gtsAvisynth.Close
                         gFSO.DeleteFile (gAvScriptPath)
                         QuitScript 1
                     End If
@@ -300,12 +306,12 @@ Const APP_TITLE = "FrapsJoin"
                     '** start V-dub script
                     gVdScriptPath = PathCheck(gWorkPath, "generated VirtualDub script name", outprefix, groupname, "vcf")
 
-                    Set vdscript = dd.CreateTextFile(gFSO.GetBaseName(gVdScriptPath) & ".vcf", True)
-                    vdscript.WriteLine "VirtualDub.Open(""" & Replace(prev.path, "\", "\\") & """);"
+                    Set gtsVirtualdub = dd.CreateTextFile(gFSO.GetBaseName(gVdScriptPath) & ".vcf", True)
+                    gtsVirtualdub.WriteLine "VirtualDub.Open(""" & Replace(prev.path, "\", "\\") & """);"
                     If (Err) Then
                         MsgBox "can't write to '" & gVdScriptPath & "': " & Err.Description, _
                                vbExclamation, APP_TITLE
-                        vdscript.Close
+                        gtsVirtualdub.Close
                         gFSO.DeleteFile (gVdScriptPath)
                         QuitScript 1
                     End If
@@ -320,7 +326,7 @@ Const APP_TITLE = "FrapsJoin"
 
                 'StatMsg "rename " & f.Name & " to " & newname
                 If (gMakeUndo) Then
-                    gfUndo.WriteLine "ren """ & newname & """ """ & f.Name & """"
+                    gtsUndo.WriteLine "ren """ & newname & """ """ & f.Name & """"
                     If (Err) Then
                         StatMsg "Can't write to undo file: " & Err.Description
                         QuitScript 1
@@ -334,7 +340,7 @@ Const APP_TITLE = "FrapsJoin"
                 End If
 
                 If (gMakeAvidemux) Then
-                    adscript.WriteLine "app.append(""" & Replace(adsourcepath, "\", "/") & newname & """);"
+                    gtsAvidemux.WriteLine "app.append(""" & Replace(adsourcepath, "\", "/") & newname & """);"
                     If (Err) Then
                         StatMsg "Can't write Avidemux script: " & Err.Description
                         QuitScript 1
@@ -342,7 +348,7 @@ Const APP_TITLE = "FrapsJoin"
                 End If
 
                 If (gMakeAvisynth) Then
-                    avscript.WriteLine "C = C + AviSource(""" & f.path & """)"
+                    gtsAvisynth.WriteLine "C = C + AviSource(""" & f.path & """)"
                     If (Err) Then
                         StatMsg "Can't write Avisynth script: " & Err.Description
                         QuitScript 1
@@ -350,7 +356,7 @@ Const APP_TITLE = "FrapsJoin"
                 End If
 
                 If (gMakeVirtDub) Then
-                    vdscript.WriteLine "VirtualDub.Append(""" & Replace(f.path, "\", "\\") & """);"
+                    gtsVirtualdub.WriteLine "VirtualDub.Append(""" & Replace(f.path, "\", "\\") & """);"
                     If (Err) Then
                         StatMsg "Can't write VirtualDub script: " & Err.Description
                         QuitScript 1
@@ -365,42 +371,28 @@ Const APP_TITLE = "FrapsJoin"
     Next
 
     If (gMakeAvidemux) Then
-        finalAvidemux adscript, adsavepath
+        finalAvidemux gtsAvidemux, adsavepath
         Err.Clear
     End If
 
     If (gMakeAvisynth) Then
-        finalAvisynth avscript, avisextra
+        finalAvisynth gtsAvisynth, avisextra
         Err.Clear
     End If
 
     If (gMakeVirtDub) Then
-        finalVirtualdub vdscript, vdubextra, vdsavepath
+        finalVirtualdub gtsVirtualdub, vdubextra, vdsavepath
         Err.Clear
     End If
 
     If (renamecount = 0) Then
         StatMsg "no files renamed"
-        gfUndo.Close
+        gtsUndo.Close
         gFSO.DeleteFile (gUndopath)
         Err.Clear
     Else
         StatMsg "renamed " & renamecount & " files; use " & _
                 gFSO.GetBaseName(gUndopath) & ".bat to undo"
-    End If    
-
-    If (SafeFileLength(gAdScriptPath) = 0) Then
-        gFSO.DeleteFile (gAdScriptPath)
-    End If
-    If (SafeFileLength(gAvScriptPath) = 0) Then
-        gFSO.DeleteFile (gAvScriptPath)
-    End If
-    If (SafeFileLength(gVdScriptPath) = 0) Then
-        gFSO.DeleteFile (gVdScriptPath)
-    End If
-    gfUndo.Close
-    If (SafeFileLength(gUndopath) = 0) Then
-        gFSO.DeleteFile (gUndopath)
     End If
 
     QuitScript 0
@@ -411,27 +403,27 @@ Const APP_TITLE = "FrapsJoin"
 '********************************
 '** finalize Avidemux script
 '
-Sub finalAvidemux(adscript, ByVal adsavepath)
+Sub finalAvidemux(gtsAvidemux, ByVal adsavepath)
 
-    If (adscript Is Nothing) Then
+    If (gtsAvidemux Is Nothing) Then
         Exit Sub
     End If
-    adscript.WriteLine ""
-    adscript.WriteLine "//app.save(""" & Replace(adsavepath, "\", "/") & """);"
-    adscript.Close
-    Set adscript = Nothing
+    gtsAvidemux.WriteLine ""
+    gtsAvidemux.WriteLine "//app.save(""" & Replace(adsavepath, "\", "/") & """);"
+    gtsAvidemux.Close
+    Set gtsAvidemux = Nothing
 
 End Sub
 
 '********************************
 '** finalize Avisynth script
 '
-Sub finalAvisynth(avscript, ByVal avisextra)
+Sub finalAvisynth(gtsAvisynth, ByVal avisextra)
 
-    If (avscript Is Nothing) Then
+    If (gtsAvisynth Is Nothing) Then
         Exit Sub
     End If
-    avscript.WriteLine vbCrLf & "C ### set special variable 'Last' = C"
+    gtsAvisynth.WriteLine vbCrLf & "C ### set special variable 'Last' = C"
 
     'optional postprocessing
     'look for file in explicit path first, userscripts folder second, working folder third
@@ -450,8 +442,8 @@ Sub finalAvisynth(avscript, ByVal avisextra)
             StatMsg "Avisynth extra script '" & avisextra & "' not found; ignoring"
             avisextra = ""
         End If
-        avscript.Close
-        Set avscript = Nothing
+        gtsAvisynth.Close
+        Set gtsAvisynth = Nothing
         Err.Clear
         Exit Sub
     End If
@@ -462,8 +454,8 @@ Sub finalAvisynth(avscript, ByVal avisextra)
     If (Err) Then
         StatMsg "Error opening '" & pathAvisScript & "': " & Err.Description
         ts.Close
-        avscript.Close
-        Set avscript = Nothing
+        gtsAvisynth.Close
+        Set gtsAvisynth = Nothing
         Err.Clear
         Exit Sub
     End If
@@ -471,11 +463,11 @@ Sub finalAvisynth(avscript, ByVal avisextra)
     Dim sLine
     Do While Not (ts.AtEndOfStream)
         sLine = ts.ReadLine
-        avscript.WriteLine sLine
+        gtsAvisynth.WriteLine sLine
     Loop
     ts.Close
-    avscript.Close
-    Set avscript = Nothing
+    gtsAvisynth.Close
+    Set gtsAvisynth = Nothing
     Err.Clear
 
 End Sub
@@ -483,9 +475,9 @@ End Sub
 '********************************
 '** finalize VirtualDub script
 '
-Sub finalVirtualdub(vdscript, vdubextra, ByVal vdsavepath)
+Sub finalVirtualdub(gtsVirtualdub, vdubextra, ByVal vdsavepath)
 
-    If (vdscript Is Nothing) Then
+    If (gtsVirtualdub Is Nothing) Then
         Exit Sub
     End If
 
@@ -506,8 +498,8 @@ Sub finalVirtualdub(vdscript, vdubextra, ByVal vdsavepath)
             StatMsg "VirtualDub extra script '" & vdubextra & "' not found; ignoring"
             vdubextra = ""
         End If
-        vdscript.Close
-        Set vdscript = Nothing
+        gtsVirtualdub.Close
+        Set gtsVirtualdub = Nothing
         Err.Clear
         Exit Sub
     End If
@@ -518,8 +510,8 @@ Sub finalVirtualdub(vdscript, vdubextra, ByVal vdsavepath)
     If (Err) Then
         StatMsg "Error opening '" & pathVdubScript & "': " & Err.Description
         ts.Close
-        vdscript.Close
-        Set vdscript = Nothing
+        gtsVirtualdub.Close
+        Set gtsVirtualdub = Nothing
         Err.Clear
         Exit Sub
     End If
@@ -539,11 +531,11 @@ Sub finalVirtualdub(vdscript, vdubextra, ByVal vdsavepath)
             sLine = Replace(sLine, "%1%", "%1")
             sLine = Replace(sLine, "%1", """" & vdsavepath & """")
         End If
-        vdscript.WriteLine sLine
+        gtsVirtualdub.WriteLine sLine
     Loop
     ts.Close
-    vdscript.Close
-    Set vdscript = Nothing
+    gtsVirtualdub.Close
+    Set gtsVirtualdub = Nothing
     Err.Clear
 
 End Sub
@@ -653,22 +645,41 @@ Sub QuitScript(ByVal errCode)
     If (gMakeUndo) Then
         If (gUndoCleanup) Then
             If (gMakeAvidemux) Then
-                gfUndo.WriteLine "del """ & gAdScriptPath & """"
+                gtsUndo.WriteLine "del """ & gAdScriptPath & """"
             End If
             If (gMakeAvisynth) Then
-                gfUndo.WriteLine "del """ & gAvScriptPath & """"
+                gtsUndo.WriteLine "del """ & gAvScriptPath & """"
             End If
             If (gMakeVirtDub) Then
-                gfUndo.WriteLine "del """ & gVdScriptPath & """"
+                gtsUndo.WriteLine "del """ & gVdScriptPath & """"
             End If
-            gfUndo.WriteLine "del """ & gUndopath & """"
+            gtsUndo.WriteLine "del """ & gUndopath & """"
         End If
-        gfUndo.Close
+        gtsUndo.Close
         If (SafeFileLength(gUndopath) = 0) Then
             gFSO.DeleteFile (gUndopath)
         End If
         Err.Clear
     End If
+
+    gtsUndo.Close
+    gtsAvidemux.Close
+    gtsAvisynth.Close
+    gtsVirtualdub.Close
+
+    If (SafeFileLength(gAdScriptPath) = 0) Then
+        gFSO.DeleteFile (gAdScriptPath)
+    End If
+    If (SafeFileLength(gAvScriptPath) = 0) Then
+        gFSO.DeleteFile (gAvScriptPath)
+    End If
+    If (SafeFileLength(gVdScriptPath) = 0) Then
+        gFSO.DeleteFile (gVdScriptPath)
+    End If
+    If (SafeFileLength(gUndopath) = 0) Then
+        gFSO.DeleteFile (gUndopath)
+    End If
+    Err.Clear
 
 '[[VBA
 '    End
